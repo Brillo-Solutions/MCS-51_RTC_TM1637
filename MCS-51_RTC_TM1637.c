@@ -97,10 +97,10 @@ void tmStart(void) // 1637 start
 void tmAck(void) // 1637 Answer
 {
    clkPin = 0;
-   delay_us(5); // After the falling edge of the eighth clock delay 5us, ACK signals the beginning of judgment
+   delay_us(2); // After the falling edge of the eighth clock delay 5us, ACK signals the beginning of judgment
    while(dioPin);
    clkPin = 1;
-   delay_us(2);
+   delay_us(5);
    clkPin = 0;
 }
 
@@ -165,9 +165,24 @@ void showTime(unsigned char segCode[])
    tmDisplay(0xC3, segCode[mMin % 16] | dpFlag);
 }
 
+void showTemperature(unsigned char segCode[])
+{   unsigned char nByte;
+    nByte = readFromI2C(DEV_ADDR_RTC, 0x0E);
+    nByte |= 0x20;  // Setting CONV bit of 0x0E register to convert the temperature
+    writeToI2C(DEV_ADDR_RTC, 0x0E, nByte);
+    nByte = readFromI2C(DEV_ADDR_RTC, 0x11);
+    nByte = (nByte / 10 * 16) + (nByte % 10); // Decimal to Hexadecimal (BCD)
+    tmDisplay(0xC0, segCode[nByte / 16]);
+    tmDisplay(0xC1, segCode[nByte % 16]);
+    tmDisplay(0xC2, 0x63); // Degree symbol
+    tmDisplay(0xC3, 0x39); // C letter
+}
+
 void main()
 {
    unsigned char segCode[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F}; // use 0x80 for colons (dp)
+   unsigned char colonDots = 12.5;
+   unsigned int dataSwitch = 350;
    IE=0x81; // Enable external button interrupt
    for(;;)
    {
@@ -195,17 +210,26 @@ void main()
 
       showTime(segCode);
 
-      if(dpCtr == 0)
+      if(colonDots > 0)
       {
-         dpCtr = 1;
-         dpFlag = 0x80;
+         colonDots--;
+         delay_ms(1);
       }
       else
       {
-         dpCtr = 0;
-         dpFlag = 0x00;
+         if(dpCtr == 0)
+         {
+            dpCtr = 1;
+            dpFlag = 0x80;
+         }
+         else
+         {
+            dpCtr = 0;
+            dpFlag = 0x00;
+         }
+         colonDots = 12;
       }
-      
+
       if(tsFlag)  // Time setting
       {
          dpFlag = 0x80;
@@ -215,7 +239,7 @@ void main()
             {
                delay_ms(250);
                mHour++;
-               
+
                if((mHour & 0x0F) == 0x0A)
                   mHour = mHour + 6;
 
@@ -227,10 +251,10 @@ void main()
             {
                delay_ms(250);
                mMin++;
-               
+
                if((mMin & 0x0F) == 0x0A)
                   mMin = mMin + 6;
-               
+
                if(mMin > 0x59)
                   mMin = 0;
             }
@@ -239,7 +263,18 @@ void main()
          tsFlag = 0;
          timeSet = 1;
       }
-      delay_ms(500);
+
+      if(dataSwitch > 0)
+      {
+         dataSwitch--;
+         delay_ms(1);
+      }
+      else
+      {
+         showTemperature(segCode);
+         dataSwitch = 350;
+         delay_ms(5000);
+      }
    }
 }
 
