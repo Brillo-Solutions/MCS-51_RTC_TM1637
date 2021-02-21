@@ -96,9 +96,16 @@ void tmStart(void) // 1637 start
 
 void tmAck(void) // 1637 Answer
 {
+   unsigned char n = 0;
    clkPin = 0;
    delay_us(2); // After the falling edge of the eighth clock delay 5us, ACK signals the beginning of judgment
-   while(dioPin);
+   while(n <= 255)
+   {
+      if(!dioPin)
+         break;
+      else
+         n++;
+   }
    clkPin = 1;
    delay_us(5);
    clkPin = 0;
@@ -182,7 +189,7 @@ void main()
 {
    unsigned char segCode[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F}; // use 0x80 for colons (dp)
    unsigned char colonDots = 12.5;
-   unsigned int dataSwitch = 350;
+   unsigned int dataSwitch = 349;
    IE=0x81; // Enable external button interrupt
    for(;;)
    {
@@ -272,7 +279,7 @@ void main()
       else
       {
          showTemperature(segCode);
-         dataSwitch = 350;
+         dataSwitch = 349;
          delay_ms(5000);
       }
    }
