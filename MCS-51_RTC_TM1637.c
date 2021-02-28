@@ -1,4 +1,5 @@
 /*AT89C4051 program to read DS3231 or DS1307 chip and display time on TM1637*/
+
 #define DEV_ADDR_RTC 0xD0    // I2C address of DS3231 and DS1307
 
 sbit sclPin at P1.B0;        // I2C serial clock line
@@ -96,16 +97,9 @@ void tmStart(void) // 1637 start
 
 void tmAck(void) // 1637 Answer
 {
-   unsigned char n = 0;
    clkPin = 0;
-   delay_us(2); // After the falling edge of the eighth clock delay 5us, ACK signals the beginning of judgment
-   while(n <= 255)
-   {
-      if(!dioPin)
-         break;
-      else
-         n++;
-   }
+   delay_us(2); // After the falling edge of the eighth clock delay 5us, ACK signals the beginning of judgement
+   while(dioPin);
    clkPin = 1;
    delay_us(5);
    clkPin = 0;
